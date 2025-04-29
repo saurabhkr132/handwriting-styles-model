@@ -4,6 +4,7 @@ from PIL import Image
 import numpy as np
 import json
 import gradio as gr
+import os
 
 # Define Generator model
 class Generator(nn.Module):
@@ -68,4 +69,5 @@ with gr.Blocks() as demo:
 
     generate_btn.click(fn=generate_image, inputs=char_input, outputs=[status, image_output])
 
-demo.launch(server_name="0.0.0.0", server_port=10000)
+port = int(os.environ.get("PORT", 7860))
+demo.launch(server_name="0.0.0.0", server_port=port)
