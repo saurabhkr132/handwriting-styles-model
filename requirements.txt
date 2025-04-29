@@ -1,4 +1,5 @@
+fastapi
+uvicorn
 torch
-gradio==3.50.2
 pillow
 numpy

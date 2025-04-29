@@ -3,8 +3,11 @@ import torch.nn as nn
 from PIL import Image
 import numpy as np
 import json
-import gradio as gr
-import os
+import io
+import base64
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import uvicorn
 
 # Define Generator model
 class Generator(nn.Module):
@@ -41,33 +44,40 @@ with open("char_to_index.json") as f:
 device = torch.device("cpu")
 num_classes = len(char_to_index)
 
-# Load model once
+# Load model
 generator = Generator(num_classes=num_classes).to(device)
 generator.load_state_dict(torch.load("generator.pth", map_location=device))
 generator.eval()
 
-# Generation function
-def generate_image(character):
-    if character not in char_to_index:
-        return f"Character '{character}' not in dataset.", None
-    label = char_to_index[character]
+# FastAPI app
+app = FastAPI()
+
+class CharacterInput(BaseModel):
+    character: str
+
+@app.post("/generate")
+def generate_image(data: CharacterInput):
+    char = data.character
+    if char not in char_to_index:
+        raise HTTPException(status_code=400, detail=f"Character '{char}' not in dataset.")
+
+    label = char_to_index[char]
     z = torch.randn(1, 64, 1, 1)
     label_tensor = torch.tensor([label], dtype=torch.long)
     with torch.no_grad():
         output = generator(z, label_tensor).squeeze().numpy()
         image = ((output + 1) / 2 * 255).astype("uint8")
         pil_image = Image.fromarray(image)
-    return "Generated successfully", pil_image
 
-# Gradio UI
-with gr.Blocks() as demo:
-    gr.Markdown("## Handwriting GAN — Generate a handwritten character")
-    char_input = gr.Textbox(label="Character")
-    generate_btn = gr.Button("Generate")
-    status = gr.Textbox(label="Status")
-    image_output = gr.Image(label="Generated Image")
+    # Convert to base64
+    buffered = io.BytesIO()
+    pil_image.save(buffered, format="PNG")
+    img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
-    generate_btn.click(fn=generate_image, inputs=char_input, outputs=[status, image_output])
+    return {"status": "success", "image_base64": img_base64}
 
-port = int(os.environ.get("PORT", 7860))
-demo.launch(server_name="0.0.0.0", server_port=port)
+# For local testing
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("app:app", host="0.0.0.0", port=port)
