@@ -8,6 +8,7 @@ import base64
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
+from fastapi.middleware.cors import CORSMiddleware
 
 # Define Generator model
 class Generator(nn.Module):
@@ -51,6 +52,14 @@ generator.eval()
 
 # FastAPI app
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or specify your frontend domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class CharacterInput(BaseModel):
     character: str
