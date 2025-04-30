@@ -47,7 +47,7 @@ num_classes = len(char_to_index)
 
 # Load model
 generator = Generator(num_classes=num_classes).to(device)
-generator.load_state_dict(torch.load("generator.pth", map_location=device))
+generator.load_state_dict(torch.load("saurabhkr132_generator.pth", map_location=device))
 generator.eval()
 
 # FastAPI app
